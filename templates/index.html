@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>匯率轉換APP</title>
+    <style>
+        /* 基本頁面樣式 */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;<!--頁面內容垂直方向上居中-->
+            align-items: center;<!--頁面內水平方向上居中-->
+            height: 100vh;<!--窗的高度-->
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        /* 主容器樣式 */
+        .container {
+            background-color: #ffffff;
+            padding: 20px 40px;
+            border-radius: 8px;<!--圓角邊框-->
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);<!--陰影-->
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        /* 設置數字輸入框樣式 */
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        /* 按鈕樣式 */
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;<!--陰背景顏色在 0.3 秒內平滑過渡-->
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* 轉換結果樣式 */
+        h2 {
+            font-size: 20px;
+            color: #333;
+            margin-top: 30px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        li:last-child {
+            border-bottom: none;
+        }
+
+        /* 圖片大小設置 */
+        img {
+            width: 24px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        /* 轉換後的金額樣式 */
+        span {
+            font-weight: bold;
+            margin-left: auto;
+            font-size: 16px;
+            color: #333;
+        }
+
+        /* 更新時間樣式 */
+        #update-time {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 標題 -->
+        <h1>匯率轉換APP</h1>
+        <form id="currencyForm" onsubmit="convertCurrency(); return false;">
+            <!-- 台幣金額輸入框 -->
+            <label for="twd_amount">輸入台幣金額：</label>
+            <input type="number" name="twd_amount" id="twd_amount" required>
+            <!-- 轉換按鈕 -->
+            <button type="button" onclick="convertCurrency()">轉換</button>
+        </form>
+        
+        <!-- 轉換結果顯示區域 -->
+        <h2>轉換結果：</h2>
+        <ul id="results">
+            <!-- 顯示台幣、人民幣、日圓、韓圓、美元和歐元的轉換結果 -->
+            <li><a href="https://g.co/kgs/tMBdDwg" target="_blank"><img src="{{ url_for('static', filename='taiwan.png') }}" alt="Taiwan Flag"></a> 台幣 (TWD): <span id="twd_result">0</span></li>
+            <li><a href="https://g.co/kgs/DQxqKeF" target="_blank"><img src="{{ url_for('static', filename='china.png') }}" alt="China Flag"></a> 中國人民幣 (CNY): <span id="cny_result">0</span></li>
+            <li><a href="https://g.co/kgs/YWTPSGM" target="_blank"><img src="{{ url_for('static', filename='japan.png') }}" alt="Japan Flag"></a> 日圓 (JPY): <span id="jpy_result">0</span></li>
+            <li><a href="https://g.co/kgs/4j9j6fm" target="_blank"><img src="{{ url_for('static', filename='korea.png') }}" alt="Korea Flag"></a> 韓圓 (KRW): <span id="krw_result">0</span></li>
+            <li><a href="https://g.co/kgs/tMBdDwg" target="_blank"><img src="{{ url_for('static', filename='american.png') }}" alt="American Flag"></a> 美國 (USD): <span id="usd_result">0</span></li>
+            <li><a href="https://g.co/kgs/UhyPq1B" target="_blank"><img src="{{ url_for('static', filename='uk.png') }}" alt="UK Flag"></a> 歐洲 (EUR): <span id="eur_result">0</span></li>
+        </ul>
+
+        <!-- 即時匯率參考網站 -->
+        <div id="reference-link">
+            台銀即時匯率：<a href="https://rate.bot.com.tw/xrt?Lang=zh-TW" target="_blank">匯率查詢</a>
+        </div>
+    </div>
+
+
+    <script>
+        // 異步函數來抓取匯率API數據
+        async function fetchExchangeRates() {
+            try {
+                const response = await fetch("/api/rates");//發送一個 HTTP 請求到提供匯率資料的 API 端點
+                const data = await response.json();//等待從 API 返回的資料轉換為 JSON 格式
+                return {
+                    "CNY": data["USDCNY"]["Exrate"] / data["USDTWD"]["Exrate"],//換算幣別
+                    "JPY": data["USDJPY"]["Exrate"] / data["USDTWD"]["Exrate"],
+                    "KRW": data["USDKRW"]["Exrate"] / data["USDTWD"]["Exrate"],
+                    "USD": data["USDUSD"]["Exrate"] / data["USDTWD"]["Exrate"],
+                    "EUR": data["USDEUR"]["Exrate"] / data["USDTWD"]["Exrate"],
+                    "TWD": 1
+                };
+            } catch (error) {
+                console.error("無法取得匯率資料:", error);
+                return null;
+            }
+        }
+
+        // 轉換匯率函數
+        async function convertCurrency() {
+            const twdAmount = parseFloat(document.getElementById("twd_amount").value);
+            if (isNaN(twdAmount) || twdAmount <= 0) {
+                alert("請輸入有效的台幣金額");
+                return;
+            }
+
+            const exchangeRates = await fetchExchangeRates();
+            if (!exchangeRates) {
+                alert("無法獲取即時匯率，請稍後重試");
+                return;
+            }
+
+            // 更新轉換結果
+            document.getElementById("twd_result").textContent = twdAmount.toFixed(2);
+            document.getElementById("cny_result").textContent = (twdAmount * exchangeRates["CNY"]).toFixed(2);//將輸入的台幣金額乘以台幣對人民幣的匯率,計算結果格式化為保留兩位小數
+            document.getElementById("jpy_result").textContent = (twdAmount * exchangeRates["JPY"]).toFixed(2);
+            document.getElementById("krw_result").textContent = (twdAmount * exchangeRates["KRW"]).toFixed(2);
+            document.getElementById("usd_result").textContent = (twdAmount * exchangeRates["USD"]).toFixed(2);
+            document.getElementById("eur_result").textContent = (twdAmount * exchangeRates["EUR"]).toFixed(2);
+        }
+    </script>
+</body>
+</html>
